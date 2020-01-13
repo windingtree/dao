@@ -42,7 +42,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param value Ethers value to send with transaction
      * @param data Signed transaction data
      * @param executed Transaction execution flag
-     * @param failed Transaction execution result
+     * @param success Transaction execution result
      */
     struct Transaction {
         address destination;
@@ -78,6 +78,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param valueOriginal Original vote value (not converted)
      * @param valueAccepted Accepted vote value (converted)
      * @param revoked Revoked flag
+     * @param withdrawn If vote has been withdrawn or no
      */
     struct Vote {
         VoteType voteType;
@@ -191,10 +192,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      */
     event TransactionFailed(uint256 proposalId);
 
-    /// @dev Contract version number
-    string public constant version = "0.1.1";
-
-    /// @dev Token that using in voting process
+    /// @dev ERC20 Token that using in voting process
     IERC20 public serviceToken;
 
     /// @dev Number of proposals
@@ -212,7 +210,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param proposalId Proposal Id
      */
     modifier proposalExists(uint256 proposalId) {
-        require(proposals[proposalId].duration != 0, "PROPOSAL_NOT_FOUND");
+        require(proposals[proposalId].duration != 0, "Dao: PROPOSAL_NOT_FOUND");
         _;
     }
     
@@ -221,7 +219,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param proposalId Proposal Id
      */
     modifier onlyProposer(uint256 proposalId) {
-        require(msg.sender == proposals[proposalId].proposer, "NOT_A_PROPOSER");
+        require(msg.sender == proposals[proposalId].proposer, "Dao: NOT_A_PROPOSER");
         _;
     }
 
@@ -230,7 +228,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param proposalId Proposal Id
      */
     modifier notPassed(uint256 proposalId) {
-        require(!proposals[proposalId].flags[0], "PROPOSAL_PASSED");
+        require(!proposals[proposalId].flags[0], "Dao: PROPOSAL_PASSED");
         _;
     }
 
@@ -239,7 +237,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param proposalId Proposal Id
      */
     modifier notProcessed(uint256 proposalId) {
-        require(!proposals[proposalId].flags[1], "PROPOSAL_PROCESSED");
+        require(!proposals[proposalId].flags[1], "Dao: PROPOSAL_PROCESSED");
         _;
     }
 
@@ -248,7 +246,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param proposalId Proposal Id
      */
     modifier notCancelled(uint256 proposalId) {
-        require(!proposals[proposalId].flags[2], "PROPOSAL_CANCELLED");
+        require(!proposals[proposalId].flags[2], "Dao: PROPOSAL_CANCELLED");
         _;
     }
 
@@ -257,7 +255,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param proposalId Proposal Id
      */
     modifier notFinished(uint256 proposalId) {
-        require(time() < proposals[proposalId].end, "PROPOSAL_FINISHED");
+        require(time() < proposals[proposalId].end, "Dao: PROPOSAL_FINISHED");
         _;
     }
 
@@ -266,7 +264,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param proposalId Proposal Id
      */
     modifier onlyFinished(uint256 proposalId) {
-        require(time() >= proposals[proposalId].end, "PROPOSAL_NOT_FINISHED");
+        require(time() >= proposals[proposalId].end, "Dao: PROPOSAL_NOT_FINISHED");
         _;
     }
 
@@ -275,7 +273,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
      * @param proposalId Proposal Id
      */
     modifier voteExists(uint256 proposalId) {
-        require(votings[proposalId].voted[msg.sender], "VOTE_NOT_FOUND");
+        require(votings[proposalId].voted[msg.sender], "Dao: VOTE_NOT_FOUND");
         _;
     }
 
@@ -321,8 +319,8 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
     ) external payable onlyWhitelisted whenNotPaused {
         assertProposalType(proposalType);// Throws an Invalid opcode if proposalType not valid
         // @todo Add conditions and test for proposal `duration` (s.l. min and max value)
-        require(destination != address(0), "INVALID_DESTINATION");
-        require(value == 0 || (value > 0 && msg.value >= value), "INSUFFICIENT_ETHER_VALUE");
+        require(destination != address(0), "Dao: INVALID_DESTINATION");
+        require(value == 0 || (value > 0 && msg.value >= value), "Dao: INSUFFICIENT_ETHER_VALUE");
 
         emit ProposalAdded(msg.sender, proposalCount);
 
@@ -368,7 +366,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
         notCancelled(proposalId)
     {
         (uint256 yes, uint256 no) = votingResult(proposalId);
-        require(yes == 0 && no == 0, "PROPOSAL_HAS_VOTES");
+        require(yes == 0 && no == 0, "Dao: PROPOSAL_HAS_VOTES");
         proposals[proposalId].flags[2] = true;
         emit ProposalCancelled(proposalId);
     }
@@ -401,8 +399,8 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
         notCancelled(proposalId)
         notFinished(proposalId)
     {
-        require(serviceToken.balanceOf(msg.sender) >= votes, "INSUFFICIENT_TOKENS_BALANCE");
-        require(serviceToken.allowance(msg.sender, address(this)) >= votes, "INSUFFICIENT_TOKENS_ALLOWANCE");
+        require(serviceToken.balanceOf(msg.sender) >= votes, "Dao: INSUFFICIENT_TOKENS_BALANCE");
+        require(serviceToken.allowance(msg.sender, address(this)) >= votes, "Dao: INSUFFICIENT_TOKENS_ALLOWANCE");
 
         // Transfer tokens to the DAO
         lockTokens(msg.sender, votes);
@@ -488,7 +486,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
         Vote storage existedVote = votings[proposalId]
             .votes[votings[proposalId].ids[msg.sender]];
 
-        require(!existedVote.revoked, "VOTE_REVOKED");
+        require(!existedVote.revoked, "Dao: VOTE_REVOKED");
 
         // Exclude vote from the voting results
         existedVote.revoked = true;
@@ -570,7 +568,7 @@ contract Dao is Initializable, Pausable, WhitelistedRole {
         onlyFinished(proposalId)
     {
         uint256 tokensBalance = tokensBalance(proposalId);
-        require(tokensBalance > 0, "INSUFFICIENT_TOKENS_BALANCE");
+        require(tokensBalance > 0, "Dao: INSUFFICIENT_TOKENS_BALANCE");
 
         Vote storage existedVote = votings[proposalId]
             .votes[votings[proposalId].ids[msg.sender]];

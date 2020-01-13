@@ -310,13 +310,6 @@ contract('DAO', accounts => {
         });
     });
 
-    describe('#version()', () => {
-
-        it('should return actual package version', async () => {
-            (await dao.methods['version()']().call()).should.equal(packageJson.version);
-        });
-    });
-
     describe('#addProposal(string,uint8,uint256,address,uint256,bytes)', () => {
 
         it('should fail if sender address not whitelisted', async () => {

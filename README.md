@@ -20,7 +20,8 @@ please refer to the [OpenZeppelin documentation](https://docs.openzeppelin.com/c
 
 Current configuration (may be verified on chain):
 
-- `DEFAULT_ADMIN_ROLE`: N/A
-- `TIMELOCK_ADMIN_ROLE`: `0xAEB7b8808ce9afc9730846Ec81880B57658734dC` (self-administered)
-- `PROPOSAL_ROLE`: `0x876969b13dcf884C13D4b4f003B69229E6b7966A` (community multi-sig)
-- `EXECUTOR_ROLE`: `0x0000000000000000000000000000000000000000` (Permissionless execution)
+* `DEFAULT_ADMIN_ROLE`: N/A
+* `TIMELOCK_ADMIN_ROLE`: `0xAEB7b8808ce9afc9730846Ec81880B57658734dC` (self-administered)
+* `PROPOSAL_ROLE`: `0x876969b13dcf884C13D4b4f003B69229E6b7966A` (community multi-sig)
+* `EXECUTOR_ROLE`: `0x0000000000000000000000000000000000000000` (Permissionless execution)
+* `minDelay`: 259200 (seconds, ie. 3 days)

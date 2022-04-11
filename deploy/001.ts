@@ -1,9 +1,12 @@
 /* eslint-disable camelcase */
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
-import { MockERC20 } from '../typechain'
 import { ethers } from 'hardhat'
-import { utils } from 'ethers'
+import { constants } from 'ethers'
+import { TimelockController } from '../typechain'
+
+const COMMUNITY_MULTI_SIG = '0x876969b13dcf884C13D4b4f003B69229E6b7966A'
+const MIN_DELAY = 60 * 60 * 24 * 3 // 3 days
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre
@@ -18,27 +21,28 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Carol: ${carol}`)
 
   // --- Deploy the contract
-  const mockErc20Deploy = await deploy('MockERC20', {
+  const timelockControllerDeploy = await deploy('TimelockController', {
     from: deployer,
     log: true,
-    autoMine: true // speed up deployment on local network, no effect on live network.
+    autoMine: true,
+    args: [MIN_DELAY, [COMMUNITY_MULTI_SIG], [constants.AddressZero]] // minimum delay, community multi-sig as only proposer and any executor
   })
 
-  if (mockErc20Deploy.newlyDeployed) {
+  if (timelockControllerDeploy.newlyDeployed) {
     console.log(
-      `Contract MockERC20 deployed at ${mockErc20Deploy.address} using ${mockErc20Deploy.receipt?.gasUsed} gas`
+      `TimelockController deployed at ${timelockControllerDeploy.address} using ${timelockControllerDeploy.receipt?.gasUsed} gas`
     )
 
-    const erc20Factory = await ethers.getContractFactory('MockERC20')
-    const erc20 = erc20Factory.attach(mockErc20Deploy.address) as MockERC20
+    const timelockControllerFactory = await ethers.getContractFactory('TimelockController')
+    const timelockController = timelockControllerFactory.attach(timelockControllerDeploy.address) as TimelockController
 
-    // mint tokens to each address
-    const NUM_TOKENS = utils.parseEther('1000000')
-    await erc20.mint(alice, NUM_TOKENS)
-    await erc20.mint(bob, NUM_TOKENS)
-    await erc20.mint(carol, NUM_TOKENS)
+    // Set timelockcontroller as timelockcontroller admin.
+    const tx = await timelockController.renounceRole(await timelockController.callStatic.TIMELOCK_ADMIN_ROLE(), deployer)
+    const receipt = await tx.wait()
+
+    console.log(receipt)
   }
 }
 
 export default func
-func.tags = ['MockERC20']
+func.tags = ['TimelockController']

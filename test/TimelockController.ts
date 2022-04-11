@@ -49,7 +49,9 @@ describe('TimelockController', function () {
       expect(await alice.timelockController.hasRole(EXECUTOR_ROLE, deployer.address)).to.be.equal(false)
     })
     it('timelock controller is itself a timelock admin', async () => {
-      expect(await alice.timelockController.hasRole(TIMELOCK_ADMIN_ROLE, alice.timelockController.address)).to.be.equal(true)
+      expect(await alice.timelockController.hasRole(TIMELOCK_ADMIN_ROLE, alice.timelockController.address)).to.be.equal(
+        true
+      )
     })
     it('community multi-sig is NOT a timelock admin', async () => {
       expect(await alice.timelockController.hasRole(TIMELOCK_ADMIN_ROLE, COMMUNITY_MULTI_SIG)).to.be.equal(false)

@@ -37,7 +37,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const timelockController = timelockControllerFactory.attach(timelockControllerDeploy.address) as TimelockController
 
     // Set timelockcontroller as timelockcontroller admin.
-    const tx = await timelockController.renounceRole(await timelockController.callStatic.TIMELOCK_ADMIN_ROLE(), deployer)
+    const tx = await timelockController.renounceRole(
+      await timelockController.callStatic.TIMELOCK_ADMIN_ROLE(),
+      deployer
+    )
     const receipt = await tx.wait()
 
     console.log(receipt)
